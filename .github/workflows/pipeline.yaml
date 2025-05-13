@@ -19,7 +19,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
-            -Dsonar.projectKey=Sujan-div_aws-docker-site  # Use exact casing
+            -Dsonar.projectKey=Sujan-div_aws-docker-site 
             -Dsonar.organization=sujan-div
             -Dsonar.host.url=https://sonarcloud.io
             -Dsonar.branch.name=main
