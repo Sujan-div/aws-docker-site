@@ -18,19 +18,25 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
+          projectBaseDir: .
           args: >
-            -Dsonar.projectKey=Sujan-div_aws-docker-site 
+            -Dsonar.projectKey=sujan-div_aws-docker-site
             -Dsonar.organization=sujan-div
             -Dsonar.host.url=https://sonarcloud.io
             -Dsonar.branch.name=main
 
-
       - name: Build Docker Image
         run: |
           docker build -t my-website .
-          docker tag my-website ghcr.io/sujan-div/aws-docker-site:latest
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u sujan-div --password-stdin
-          docker push ghcr.io/sujan-div/aws-docker-site:latest
+          
+      - name: Tag and Push Docker Image to GHCR
+        run: |
+          # Use your personal namespace, not org, unless you’ve fixed org permissions
+          IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/aws-docker-site
+          
+          docker tag my-website $IMAGE_NAME
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          docker push $IMAGE_NAME
 
-      - name: Trigger CloudFormation (optional – requires AWS credentials)
+      - name: Trigger CloudFormation (placeholder)
         run: echo "Manual deployment or use AWS CLI"
