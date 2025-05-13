@@ -1,0 +1,33 @@
+# .github/workflows/pipeline.yaml
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-analyze:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v2
+        with:
+          projectKey: YOUR_PROJECT_KEY
+          organization: YOUR_ORG
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Build Docker Image
+        run: |
+          docker build -t my-website .
+          docker tag my-website ghcr.io/YOUR_GITHUB_ORG/YOUR_REPO:latest
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u USERNAME --password-stdin
+          docker push ghcr.io/YOUR_GITHUB_ORG/YOUR_REPO:latest
+
+      - name: Trigger CloudFormation (optional – requires AWS credentials)
+        run: echo "Manual deployment or use AWS CLI"
