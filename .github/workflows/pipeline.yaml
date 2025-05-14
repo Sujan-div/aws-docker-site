@@ -1,42 +1,45 @@
-name: CI/CD Pipeline
+name: "Deploy to Server"
 
 on:
   push:
-    branches:
-      - main
+      branches:
+        - main
 
 jobs:
-  build-and-analyze:
+  deploy:
     runs-on: ubuntu-latest
+    env:
+      SERVER_IP: ${{ vars.SERVER_IP }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v2
+      - name: "Build Docker Image"
+        run: |
+          docker login -u suzan1245 -p $DOCKERHUB_PAT
+          docker build -t suzan1245/mywebsite .
+          docker push suzan1245/mywebsite
         env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          projectBaseDir: .
-          args: >
-            -Dsonar.projectKey=sujan-div_aws-docker-site
-            -Dsonar.organization=sujan-div
-            -Dsonar.host.url=https://sonarcloud.io
-            -Dsonar.branch.name=main
+          DOCKERHUB_PAT: ${{ secrets.DOCKERHUB_PAT }}
 
-      - name: Build Docker Image
+      - name: "Configure SSH"
         run: |
-          docker build -t my-website .
-          
-      - name: Tag and Push Docker Image to GHCR
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
+          touch ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+      
+      - name: "Put SSH Key in Docker file for Server Access"
         run: |
-          # Use your personal namespace, not org, unless you’ve fixed org permissions
-          IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/aws-docker-site
-          
-          docker tag my-website $IMAGE_NAME
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-          docker push $IMAGE_NAME
+          touch pem.pem
+          echo $SSH_KEY64 | base64 -d > pem.pem && chmod 400 pem.pem
+          ssh-keygen -R $SERVER_IP
+        env: 
+          SSH_KEY64: ${{ secrets.SSH_KEY64 }}
 
-      - name: Trigger CloudFormation (placeholder)
-        run: echo "Manual deployment or use AWS CLI"
+      - name: "Docker Pull and Restart Docker"
+        run: |
+          ssh -t ubuntu@$SERVER_IP -i pem.pem 'docker pull suzan1245/mywebsite'
+          ssh -t ubuntu@$SERVER_IP -i pem.pem 'docker stop mynginx && docker rm mynginx'
+          ssh -t ubuntu@$SERVER_IP -i pem.pem 'docker run --name mynginx -p 80:80 -d suzan1245/mywebsite'
