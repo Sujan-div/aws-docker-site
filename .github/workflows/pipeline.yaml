@@ -16,7 +16,7 @@ jobs:
 
       - name: "Build Docker Image"
         run: |
-          docker login -u suzan1245 -p $DOCKERHUB_PAT
+          echo "${{ secrets.DOCKERHUB_PAT }}" | docker login -u suzan1245 --password-stdin
           docker build -t suzan1245/mywebsite .
           docker push suzan1245/mywebsite
         env:
