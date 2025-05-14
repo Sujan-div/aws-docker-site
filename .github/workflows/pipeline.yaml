@@ -43,11 +43,16 @@ jobs:
         env:
           SSH_KEY64: ${{ secrets.SSH_KEY64 }}
 
-      - name: "Pull Image and Restart Container on EC2"
+         - name: "Put SSH Key in Docker file for Server Access"
         run: |
-          ssh -o StrictHostKeyChecking=no -i pem.pem ubuntu@$SERVER_IP << 'EOF'
-            docker pull suzan1245/mywebsite
-            docker stop mynginx || true
-            docker rm mynginx || true
-            docker run --name mynginx -p 80:80 -d suzan1245/mywebsite
-          EOF
+          touch pem.pem
+          echo $SSH_KEY64 | base64 -d > pem.pem && chmod 400 pem.pem
+          ssh-keygen -R $SERVER_IP
+        env: 
+          SSH_KEY64: ${{ secrets.SSH_KEY64 }}
+
+      - name: "Docker Pull and Restart Docker"
+        run: |
+          ssh -t ubuntu@$SERVER_IP -i pem.pem 'docker pull suzan1245/mywebsite'
+          ssh -t ubuntu@$SERVER_IP -i pem.pem 'docker stop mynginx && docker rm mynginx'
+          ssh -t ubuntu@$SERVER_IP -i pem.pem 'docker run --name mynginx -p 80:80 -d suzan1245/mywebsite'
