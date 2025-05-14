@@ -2,8 +2,8 @@ name: "Deploy to Server"
 
 on:
   push:
-    branches:
-      - main
+      branches:
+        - main
 
 jobs:
   deploy:
@@ -16,7 +16,7 @@ jobs:
 
       - name: "Build Docker Image"
         run: |
-          echo "${{ secrets.DOCKERHUB_PAT }}" | docker login -u suzan1245 --password-stdin
+          docker login -u suzan1245 -p $DOCKERHUB_PAT
           docker build -t suzan1245/mywebsite .
           docker push suzan1245/mywebsite
         env:
@@ -26,27 +26,14 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          echo -e "Host *\n\tStrictHostKeyChecking no\n" > ~/.ssh/config
+          echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
           touch ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
-
-      - name: "Put SSH Key and Handle Known Hosts"
+      
+      - name: "Put SSH Key in Docker file for Server Access"
         run: |
-          echo "${{ secrets.SSH_KEY64 }}" | base64 -d > pem.pem
+          echo $SSH_KEY64 | base64 -d > pem.pem
           chmod 400 pem.pem
-
-          # Remove previous known_hosts entry if it exists
-          touch ~/.ssh/known_hosts
-          if grep -q "$SERVER_IP" ~/.ssh/known_hosts; then
-            ssh-keygen -R "$SERVER_IP"
-          fi
-        env:
-          SSH_KEY64: ${{ secrets.SSH_KEY64 }}
-
-         - name: "Put SSH Key in Docker file for Server Access"
-        run: |
-          touch pem.pem
-          echo $SSH_KEY64 | base64 -d > pem.pem && chmod 400 pem.pem
           ssh-keygen -R $SERVER_IP
         env: 
           SSH_KEY64: ${{ secrets.SSH_KEY64 }}
