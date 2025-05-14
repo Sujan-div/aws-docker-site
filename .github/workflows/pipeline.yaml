@@ -32,9 +32,10 @@ jobs:
       
       - name: "Put SSH Key in Docker file for Server Access"
         run: |
-          echo $SSH_KEY64 | base64 -d > pem.pem
+          echo "$SSH_KEY64" | base64 -d > pem.pem
           chmod 400 pem.pem
-          ssh-keygen -R $SERVER_IP
+          ssh-keygen -R "$SERVER_IP" || true
+
         env: 
           SSH_KEY64: ${{ secrets.SSH_KEY64 }}
 
