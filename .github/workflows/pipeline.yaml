@@ -43,4 +43,4 @@ jobs:
         run: |
           ssh -t ubuntu@$SERVER_IP -i pem.pem 'docker pull suzan1245/mywebsite'
           ssh -t ubuntu@$SERVER_IP -i pem.pem 'docker stop mynginx && docker rm mynginx'
-          ssh -t ubuntu@$SERVER_IP -i pem.pem 'docker run --name mynginx -p 80:80 -d suzan1245/mywebsite'
+          ssh -t ubuntu@$SERVER_IP -i pem.pem 'docker run --name mynginx -p 8080:80 -d suzan1245/mywebsite'
