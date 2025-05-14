@@ -1,9 +1,9 @@
 name: "Deploy to Server"
-#comment1
+
 on:
   push:
-      branches:
-        - main
+    branches:
+      - main
 
 jobs:
   deploy:
@@ -26,20 +26,28 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
+          echo -e "Host *\n\tStrictHostKeyChecking no\n" > ~/.ssh/config
           touch ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
-      
-      - name: "Put SSH Key in Docker file for Server Access"
+
+      - name: "Put SSH Key and Handle Known Hosts"
         run: |
-          touch pem.pem
-          echo $SSH_KEY64 | base64 -d > pem.pem && chmod 400 pem.pem
-          ssh-keygen -R $SERVER_IP
-        env: 
+          echo "${{ secrets.SSH_KEY64 }}" | base64 -d > pem.pem
+          chmod 400 pem.pem
+
+          # Remove previous known_hosts entry if it exists
+          touch ~/.ssh/known_hosts
+          if grep -q "$SERVER_IP" ~/.ssh/known_hosts; then
+            ssh-keygen -R "$SERVER_IP"
+          fi
+        env:
           SSH_KEY64: ${{ secrets.SSH_KEY64 }}
 
-      - name: "Docker Pull and Restart Docker"
+      - name: "Pull Image and Restart Container on EC2"
         run: |
-          ssh -t ubuntu@$SERVER_IP -i pem.pem 'docker pull suzan1245/mywebsite'
-          ssh -t ubuntu@$SERVER_IP -i pem.pem 'docker stop mynginx && docker rm mynginx'
-          ssh -t ubuntu@$SERVER_IP -i pem.pem 'docker run --name mynginx -p 80:80 -d suzan1245/mywebsite'
+          ssh -o StrictHostKeyChecking=no -i pem.pem ubuntu@$SERVER_IP << 'EOF'
+            docker pull suzan1245/mywebsite
+            docker stop mynginx || true
+            docker rm mynginx || true
+            docker run --name mynginx -p 80:80 -d suzan1245/mywebsite
+          EOF
